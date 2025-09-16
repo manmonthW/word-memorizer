@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { SRSAlgorithm } from '@/lib/srs'
+// import { SRSAlgorithm } from '@/lib/srs'
 
 // 获取学习单词（新单词 + 复习单词）
 export async function GET(request: NextRequest) {
   try {
+    // 动态导入 SRS 算法
+    const { SRSAlgorithm } = await import('@/lib/srs')
+    
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId') || 'default_user'
     const mode = searchParams.get('mode') || 'mixed' // 'new', 'review', 'mixed'
@@ -56,6 +59,9 @@ export async function GET(request: NextRequest) {
 // 更新学习记录
 export async function POST(request: NextRequest) {
   try {
+    // 动态导入 SRS 算法
+    const { SRSAlgorithm } = await import('@/lib/srs')
+    
     const body = await request.json()
     const { userId = 'default_user', wordId, rating } = body
 

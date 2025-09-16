@@ -17,18 +17,7 @@ import {
   Home,
   Timer
 } from 'lucide-react'
-import { StudyRating } from '@/lib/srs'
-
-interface WordCard {
-  id: number
-  word: string
-  phonetic: string
-  meaning: string
-  example: string
-  image_url?: string
-  category: string
-  isNew: boolean
-}
+import { StudyRating, WordCard } from '@/types/client'
 
 export default function LearnPage() {
   const [currentWordIndex, setCurrentWordIndex] = useState(0)

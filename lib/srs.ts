@@ -1,5 +1,10 @@
 import { LearningRecord } from '@/types';
-import database from './database';
+
+// 只在服务端导入数据库
+let database: any = null;
+if (typeof window === 'undefined') {
+  database = require('./database-new').default;
+}
 
 // SRS算法配置
 export const SRS_CONFIG = {
@@ -151,6 +156,8 @@ export class SRSAlgorithm {
    * 获取今日需要复习的单词
    */
   static async getTodayReviewWords(userId: string): Promise<LearningRecord[]> {
+    if (!database) throw new Error('Database not available on client side');
+    
     const now = new Date().toISOString();
     const sql = `
       SELECT lr.*, w.word, w.meaning, w.phonetic, w.example, w.image_url
@@ -160,13 +167,15 @@ export class SRSAlgorithm {
       ORDER BY lr.next_review ASC
     `;
     
-    return await database.all<LearningRecord>(sql, [userId, now]);
+    return database.all<LearningRecord>(sql, [userId, now]);
   }
 
   /**
    * 获取新单词（尚未学习过的）
    */
   static async getNewWords(userId: string, limit: number = 10): Promise<any[]> {
+    if (!database) throw new Error('Database not available on client side');
+    
     const sql = `
       SELECT w.*, 
              CASE WHEN lr.id IS NULL THEN 1 ELSE 0 END as is_new
@@ -177,7 +186,7 @@ export class SRSAlgorithm {
       LIMIT ?
     `;
     
-    return await database.all(sql, [userId, limit]);
+    return database.all(sql, [userId, limit]);
   }
 
   /**
@@ -188,8 +197,10 @@ export class SRSAlgorithm {
     wordId: number, 
     rating: StudyRating
   ): Promise<void> {
+    if (!database) throw new Error('Database not available on client side');
+    
     // 获取当前记录
-    let record = await database.get<LearningRecord>(
+    let record = database.get<LearningRecord>(
       'SELECT * FROM learning_records WHERE user_id = ? AND word_id = ?',
       [userId, wordId]
     );
@@ -217,7 +228,7 @@ export class SRSAlgorithm {
 
     if (record.id === 0) {
       // 插入新记录
-      await database.run(
+      database.run(
         `INSERT INTO learning_records 
          (word_id, user_id, study_count, correct_count, last_studied, next_review, 
           interval_days, ease_factor, status) 
@@ -230,7 +241,7 @@ export class SRSAlgorithm {
       );
     } else {
       // 更新现有记录
-      await database.run(
+      database.run(
         `UPDATE learning_records 
          SET study_count = ?, correct_count = ?, last_studied = ?, next_review = ?,
              interval_days = ?, ease_factor = ?, status = ?
@@ -255,7 +266,9 @@ export class SRSAlgorithm {
     masteredWords: number;
     todayReview: number;
   }> {
-    const stats = await database.get<any>(
+    if (!database) throw new Error('Database not available on client side');
+    
+    const stats = database.get<any>(
       `SELECT 
         COUNT(DISTINCT w.id) as totalWords,
         COUNT(CASE WHEN lr.status IS NULL THEN 1 END) as newWords,
@@ -267,7 +280,7 @@ export class SRSAlgorithm {
       [userId]
     );
 
-    const todayReview = await database.get<any>(
+    const todayReview = database.get<any>(
       `SELECT COUNT(*) as count
        FROM learning_records
        WHERE user_id = ? AND next_review <= datetime('now')`,

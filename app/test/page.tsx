@@ -21,23 +21,7 @@ import {
   Star
 } from 'lucide-react'
 
-interface TestQuestion {
-  id: number
-  word: string
-  phonetic: string
-  correctAnswer: string
-  options?: string[]
-  type: 'multiple_choice' | 'spelling' | 'fill_blank'
-  sentence?: string
-  difficulty: number
-}
-
-interface TestResult {
-  questionId: number
-  isCorrect: boolean
-  userAnswer: string
-  timeSpent: number
-}
+import { TestQuestion, TestResult } from '@/types/client'
 
 export default function TestPage() {
   const [testType, setTestType] = useState<'multiple_choice' | 'spelling' | 'fill_blank'>('multiple_choice')

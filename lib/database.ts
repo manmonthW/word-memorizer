@@ -42,17 +42,84 @@ class Database {
   private async setupDatabase() {
     if (!this.db) return;
 
-    const schemaPath = path.join(process.cwd(), 'database', 'schema.sql');
-    const schema = fs.readFileSync(schemaPath, 'utf8');
+    try {
+      const schemaPath = path.join(process.cwd(), 'database', 'schema.sql');
+      let schema: string;
+      
+      try {
+        schema = fs.readFileSync(schemaPath, 'utf8');
+      } catch (error) {
+        // 如果无法读取文件，使用内联SQL
+        schema = `
+          CREATE TABLE IF NOT EXISTS words (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              word TEXT NOT NULL,
+              phonetic TEXT,
+              meaning TEXT NOT NULL,
+              example TEXT,
+              image_url TEXT,
+              difficulty_level INTEGER DEFAULT 1 CHECK (difficulty_level BETWEEN 1 AND 5),
+              category TEXT DEFAULT 'general',
+              wordbook_id INTEGER,
+              created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+              updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          CREATE TABLE IF NOT EXISTS wordbooks (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              name TEXT NOT NULL,
+              description TEXT,
+              user_id TEXT NOT NULL,
+              total_words INTEGER DEFAULT 0,
+              is_active BOOLEAN DEFAULT 1,
+              created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+              updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          CREATE TABLE IF NOT EXISTS learning_records (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              word_id INTEGER NOT NULL,
+              user_id TEXT NOT NULL,
+              study_count INTEGER DEFAULT 0,
+              correct_count INTEGER DEFAULT 0,
+              last_studied DATETIME,
+              next_review DATETIME,
+              interval_days REAL DEFAULT 1,
+              ease_factor REAL DEFAULT 2.5,
+              status TEXT DEFAULT 'new' CHECK (status IN ('new', 'learning', 'review', 'mastered')),
+              created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+              updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+              UNIQUE(word_id, user_id)
+          );
+          
+          CREATE TABLE IF NOT EXISTS user_stats (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              user_id TEXT NOT NULL UNIQUE,
+              total_words INTEGER DEFAULT 0,
+              words_mastered INTEGER DEFAULT 0,
+              current_streak INTEGER DEFAULT 0,
+              longest_streak INTEGER DEFAULT 0,
+              total_study_time_minutes INTEGER DEFAULT 0,
+              level INTEGER DEFAULT 1,
+              experience_points INTEGER DEFAULT 0,
+              last_active DATETIME DEFAULT CURRENT_TIMESTAMP,
+              created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+              updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          );
+        `;
+      }
 
-    // 分割SQL语句并执行
-    const statements = schema
-      .split(';')
-      .map(s => s.trim())
-      .filter(s => s.length > 0);
+      // 分割SQL语句并执行
+      const statements = schema
+        .split(';')
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
 
-    for (const statement of statements) {
-      await this.run(statement);
+      for (const statement of statements) {
+        await this.run(statement);
+      }
+    } catch (error) {
+      console.error('Error setting up database:', error);
     }
   }
 
