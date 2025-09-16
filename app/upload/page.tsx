@@ -334,7 +334,6 @@ export default function UploadPage() {
                     variant="neon" 
                     size="lg"
                     onClick={handleUploadToDatabase}
-                    disabled={uploadStatus === 'uploading'}
                   >
                     <BookOpen className="w-4 h-4 mr-2" />
                     添加到词库
