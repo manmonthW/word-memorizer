@@ -1,52 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-// import { SRSAlgorithm } from '@/lib/srs'
 
-// 获取学习单词（新单词 + 复习单词）
+// 这个 API 路由现在只是为了兼容性，实际数据处理在客户端进行
 export async function GET(request: NextRequest) {
   try {
-    // 动态导入 SRS 算法
-    const { SRSAlgorithm } = await import('@/lib/srs')
-    
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId') || 'default_user'
-    const mode = searchParams.get('mode') || 'mixed' // 'new', 'review', 'mixed'
-    const limit = parseInt(searchParams.get('limit') || '10')
-
-    let words = []
-
-    if (mode === 'new') {
-      // 只获取新单词
-      words = await SRSAlgorithm.getNewWords(userId, limit)
-    } else if (mode === 'review') {
-      // 只获取复习单词
-      words = await SRSAlgorithm.getTodayReviewWords(userId)
-    } else {
-      // 混合模式：优先复习，然后新单词
-      const reviewWords = await SRSAlgorithm.getTodayReviewWords(userId)
-      const remainingSlots = Math.max(0, limit - reviewWords.length)
-      const newWords = remainingSlots > 0 ? await SRSAlgorithm.getNewWords(userId, remainingSlots) : []
-      
-      words = [...reviewWords, ...newWords]
-    }
-
-    // 为每个单词添加学习状态信息
-    const wordsWithStatus = words.map(word => ({
-      ...word,
-      isNew: !word.last_studied,
-      nextReview: word.next_review,
-      studyCount: word.study_count || 0
-    }))
-
     return NextResponse.json({
       success: true,
-      words: wordsWithStatus,
+      words: [],
       stats: {
-        total: words.length,
-        new: words.filter(w => !w.last_studied).length,
-        review: words.filter(w => w.last_studied).length
+        total: 0,
+        new: 0,
+        review: 0
       }
     })
-
   } catch (error) {
     console.error('Get learning words error:', error)
     return NextResponse.json(
@@ -56,14 +21,11 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// 更新学习记录
+// 更新学习记录（现在只返回成功响应，实际更新在客户端进行）
 export async function POST(request: NextRequest) {
   try {
-    // 动态导入 SRS 算法
-    const { SRSAlgorithm } = await import('@/lib/srs')
-    
     const body = await request.json()
-    const { userId = 'default_user', wordId, rating } = body
+    const { wordId, rating } = body
 
     if (!wordId || rating === undefined) {
       return NextResponse.json(
@@ -72,16 +34,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 更新学习记录
-    await SRSAlgorithm.updateLearningRecord(userId, wordId, rating)
-
-    // 获取更新后的统计信息
-    const stats = await SRSAlgorithm.getStudyStats(userId)
-
     return NextResponse.json({
       success: true,
       message: '学习记录更新成功',
-      stats
+      stats: {
+        totalWords: 0,
+        newWords: 0,
+        reviewWords: 0,
+        masteredWords: 0
+      }
     })
 
   } catch (error) {
