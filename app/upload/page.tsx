@@ -158,38 +158,34 @@ export default function UploadPage() {
         })
       }, 200)
 
-      // 实际的数据库上传逻辑
-      const response = await fetch('/api/words/upload', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          words: allWords, // 上传所有单词而不只是预览
-          userId: 'default_user',
-          wordbookName: fileName.replace(/\.[^/.]+$/, '') // 去掉文件扩展名
-        })
-      })
-
+      // 使用本地存储保存单词数据
+      const { localDB } = await import('@/lib/local-storage')
+      
+      // 格式化单词数据
+      const formattedWords = allWords.map(word => ({
+        word: word.word,
+        phonetic: word.phonetic || '',
+        meaning: word.meaning,
+        example: word.example || '',
+        category: word.category || 'general'
+      }))
+      
+      // 保存到本地存储
+      const savedCount = localDB.addWords(formattedWords)
+      
       clearInterval(progressInterval)
       setUploadProgress(100)
-
-      if (!response.ok) {
-        throw new Error('上传失败')
-      }
-
-      const result = await response.json()
       
-      if (result.success) {
+      if (savedCount > 0) {
         setUploadStatus('success')
         // 显示成功消息
         setTimeout(() => {
-          if (confirm('上传成功！是否现在开始学习？')) {
+          if (confirm(`成功保存 ${savedCount} 个单词！是否现在开始学习？`)) {
             window.location.href = '/learn'
           }
         }, 1000)
       } else {
-        throw new Error(result.error || '上传失败')
+        throw new Error('保存单词失败')
       }
 
     } catch (error) {

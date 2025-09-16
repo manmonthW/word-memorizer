@@ -35,29 +35,28 @@ export default function LearnPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
 
-  // 从API获取学习单词
+  // 从本地存储获取学习单词
   useEffect(() => {
     const fetchWords = async () => {
       try {
         setIsLoading(true)
-        const response = await fetch(`/api/words/learn?userId=default_user&mode=${studyMode}&limit=10`)
         
-        if (!response.ok) {
-          throw new Error('获取单词失败')
-        }
+        // 动态导入本地存储模块
+        const { LocalSRSAlgorithm } = await import('@/lib/srs-local')
         
-        const data = await response.json()
+        // 获取混合学习单词
+        const wordsData = LocalSRSAlgorithm.getMixedStudyWords(10)
         
-        if (data.success && data.words.length > 0) {
-          const formattedWords: WordCard[] = data.words.map((word: any) => ({
-            id: word.id || word.word_id,
+        if (wordsData.length > 0) {
+          const formattedWords: WordCard[] = wordsData.map((word: any) => ({
+            id: word.id,
             word: word.word,
             phonetic: word.phonetic || '',
             meaning: word.meaning,
             example: word.example || '',
             image_url: word.image_url,
             category: word.category || 'general',
-            isNew: word.isNew || !word.last_studied
+            isNew: word.isNew
           }))
           
           setWords(formattedWords)
@@ -70,7 +69,7 @@ export default function LearnPage() {
         }
       } catch (error) {
         console.error('Failed to fetch words:', error)
-        setError('获取单词失败，请检查网络连接')
+        setError('获取单词失败，请先上传单词本')
       } finally {
         setIsLoading(false)
       }
@@ -104,22 +103,9 @@ export default function LearnPage() {
     const isCorrect = rating >= StudyRating.HARD
     
     try {
-      // 更新服务器端学习记录
-      const response = await fetch('/api/words/learn', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: 'default_user',
-          wordId: currentWord.id,
-          rating: rating
-        })
-      })
-      
-      if (!response.ok) {
-        throw new Error('更新学习记录失败')
-      }
+      // 使用本地存储更新学习记录
+      const { LocalSRSAlgorithm } = await import('@/lib/srs-local')
+      LocalSRSAlgorithm.updateLearningRecord(currentWord.id, rating)
       
       // 更新本地统计
       setSessionStats(prev => ({
@@ -137,7 +123,8 @@ export default function LearnPage() {
           setShowAnswer(false)
         } else {
           // 学习会话结束
-          alert('学习会话完成！获得了 ' + (sessionStats.correct + (isCorrect ? 1 : 0)) * 10 + ' 经验值！')
+          const finalCorrect = sessionStats.correct + (isCorrect ? 1 : 0)
+          alert(`学习会话完成！获得了 ${finalCorrect * 10} 经验值！`)
           window.location.href = '/'
         }
       }, 500)

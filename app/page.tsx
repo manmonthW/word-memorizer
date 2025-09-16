@@ -10,16 +10,48 @@ import { PlayCircle, BookOpen, Target, Trophy, Zap, Star, Brain, TrendingUp } fr
 
 export default function HomePage() {
   const [studyStats, setStudyStats] = useState({
-    totalWords: 150,
-    newWords: 23,
-    reviewWords: 12,
-    masteredWords: 67,
-    todayProgress: 65,
+    totalWords: 0,
+    newWords: 0,
+    reviewWords: 0,
+    masteredWords: 0,
+    todayProgress: 0,
     currentStreak: 7,
     level: 1,
     xp: 340,
     xpToNext: 500
   })
+
+  // 加载本地存储的统计数据
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        if (typeof window !== 'undefined') {
+          const { localDB } = await import('@/lib/local-storage')
+          const stats = localDB.getStudyStats()
+          
+          // 计算今日进度（假设目标是学习10个新单词和复习所有到期单词）
+          const todayGoalNew = 10
+          const todayGoalReview = stats.todayReview
+          const todayTotal = todayGoalNew + todayGoalReview
+          const studiedToday = 0 // 这里可以从会话存储中获取今日已学习数量
+          const todayProgress = todayTotal > 0 ? Math.min((studiedToday / todayTotal) * 100, 100) : 0
+          
+          setStudyStats(prev => ({
+            ...prev,
+            totalWords: stats.totalWords,
+            newWords: stats.newWords,
+            reviewWords: stats.todayReview,
+            masteredWords: stats.masteredWords,
+            todayProgress: Math.round(todayProgress)
+          }))
+        }
+      } catch (error) {
+        console.error('Failed to load stats:', error)
+      }
+    }
+
+    loadStats()
+  }, [])
 
   const [todayGoal] = useState({
     newWords: 10,
