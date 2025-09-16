@@ -86,7 +86,7 @@ export default function HomePage() {
         <motion.div variants={itemVariants} className="text-center">
           <h1 className="text-4xl md:text-6xl font-bold mb-4">
             <span className="bg-gradient-to-r from-neon-blue via-electric-purple to-neon-green bg-clip-text text-transparent">
-              准备好征服单词了吗？
+              张桓羽同学，准备好征服单词了吗？
             </span>
           </h1>
           <p className="text-xl text-gray-300 mb-8">
