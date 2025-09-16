@@ -22,6 +22,7 @@ export default function UploadPage() {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [fileName, setFileName] = useState('')
   const [wordsPreview, setWordsPreview] = useState<WordData[]>([])
+  const [allWords, setAllWords] = useState<WordData[]>([])
   const [errorMessage, setErrorMessage] = useState('')
   const [totalWords, setTotalWords] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -62,6 +63,7 @@ export default function UploadPage() {
             throw new Error('文件中没有找到有效的单词数据')
           }
 
+          setAllWords(words) // 保存所有单词
           setWordsPreview(words.slice(0, 5)) // 预览前5个单词
           setTotalWords(words.length)
           setUploadStatus('success')
@@ -103,6 +105,7 @@ export default function UploadPage() {
           throw new Error('文件中没有找到有效的单词数据')
         }
 
+        setAllWords(words) // 保存所有单词
         setWordsPreview(words.slice(0, 5))
         setTotalWords(words.length)
         setUploadStatus('success')
@@ -134,23 +137,67 @@ export default function UploadPage() {
   }
 
   const handleUploadToDatabase = async () => {
+    if (allWords.length === 0) {
+      setErrorMessage('没有单词数据可以上传')
+      setUploadStatus('error')
+      return
+    }
+
     setUploadStatus('uploading')
     setUploadProgress(0)
 
-    // 模拟上传进度
-    const progressInterval = setInterval(() => {
-      setUploadProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(progressInterval)
-          setUploadStatus('success')
-          return 100
-        }
-        return prev + 10
-      })
-    }, 200)
+    try {
+      // 模拟上传进度
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval)
+            return 90
+          }
+          return prev + 10
+        })
+      }, 200)
 
-    // TODO: 实际的数据库上传逻辑
-    // await uploadWordsToDatabase(wordsPreview)
+      // 实际的数据库上传逻辑
+      const response = await fetch('/api/words/upload', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          words: allWords, // 上传所有单词而不只是预览
+          userId: 'default_user',
+          wordbookName: fileName.replace(/\.[^/.]+$/, '') // 去掉文件扩展名
+        })
+      })
+
+      clearInterval(progressInterval)
+      setUploadProgress(100)
+
+      if (!response.ok) {
+        throw new Error('上传失败')
+      }
+
+      const result = await response.json()
+      
+      if (result.success) {
+        setUploadStatus('success')
+        // 显示成功消息
+        setTimeout(() => {
+          if (confirm('上传成功！是否现在开始学习？')) {
+            window.location.href = '/learn'
+          }
+        }, 1000)
+      } else {
+        throw new Error(result.error || '上传失败')
+      }
+
+    } catch (error) {
+      console.error('Upload error:', error)
+      setErrorMessage(error instanceof Error ? error.message : '上传过程中发生错误')
+      setUploadStatus('error')
+      setUploadProgress(0)
+    }
   }
 
   const downloadTemplate = () => {

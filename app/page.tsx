@@ -110,7 +110,8 @@ export default function HomePage() {
 
         {/* Action Buttons */}
         <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="cyber-card border-neon-green/30 hover:border-neon-green/60 transition-all duration-300 cursor-pointer group">
+          <Card className="cyber-card border-neon-green/30 hover:border-neon-green/60 transition-all duration-300 cursor-pointer group"
+                onClick={() => window.location.href = '/learn'}>
             <CardContent className="p-6">
               <div className="flex items-center space-x-4">
                 <div className="bg-neon-green/20 p-3 rounded-full group-hover:bg-neon-green/30 transition-colors">
@@ -120,14 +121,19 @@ export default function HomePage() {
                   <h3 className="text-xl font-bold text-neon-green">开始学习</h3>
                   <p className="text-gray-400">学习新单词或复习已学内容</p>
                 </div>
-                <Button variant="neon" size="lg" className="btn-hover-glow">
+                <Button variant="neon" size="lg" className="btn-hover-glow"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.location.href = '/learn';
+                        }}>
                   开始
                 </Button>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="cyber-card border-electric-purple/30 hover:border-electric-purple/60 transition-all duration-300 cursor-pointer group">
+          <Card className="cyber-card border-electric-purple/30 hover:border-electric-purple/60 transition-all duration-300 cursor-pointer group"
+                onClick={() => window.location.href = '/test'}>
             <CardContent className="p-6">
               <div className="flex items-center space-x-4">
                 <div className="bg-electric-purple/20 p-3 rounded-full group-hover:bg-electric-purple/30 transition-colors">
@@ -137,7 +143,11 @@ export default function HomePage() {
                   <h3 className="text-xl font-bold text-electric-purple">智能测试</h3>
                   <p className="text-gray-400">检验学习成果，挑战自己</p>
                 </div>
-                <Button variant="outline" size="lg" className="border-electric-purple text-electric-purple hover:bg-electric-purple hover:text-black">
+                <Button variant="outline" size="lg" className="border-electric-purple text-electric-purple hover:bg-electric-purple hover:text-black"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.location.href = '/test';
+                        }}>
                   测试
                 </Button>
               </div>
@@ -244,10 +254,23 @@ export default function HomePage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="border-2 border-dashed border-neon-green/30 rounded-lg p-8 text-center hover:border-neon-green/60 transition-colors cursor-pointer">
+                  <div 
+                    className="border-2 border-dashed border-neon-green/30 rounded-lg p-8 text-center hover:border-neon-green/60 transition-colors cursor-pointer"
+                    onClick={() => window.location.href = '/upload'}
+                  >
                     <BookOpen className="w-12 h-12 text-neon-green mx-auto mb-4" />
                     <p className="text-gray-300 mb-2">点击或拖拽文件到此处</p>
                     <p className="text-sm text-gray-500">支持 .csv, .txt 格式</p>
+                  </div>
+                  <div className="mt-4 text-center">
+                    <Button 
+                      variant="neon" 
+                      onClick={() => window.location.href = '/upload'}
+                      className="w-full"
+                    >
+                      <BookOpen className="w-4 h-4 mr-2" />
+                      进入单词本管理
+                    </Button>
                   </div>
                 </CardContent>
               </Card>

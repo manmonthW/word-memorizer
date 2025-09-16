@@ -42,37 +42,53 @@ export default function LearnPage() {
   })
   const [showAnswer, setShowAnswer] = useState(false)
   const [sessionStartTime] = useState(Date.now())
+  const [words, setWords] = useState<WordCard[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  // 模拟单词数据 - 在实际应用中从API获取
-  const [words] = useState<WordCard[]>([
-    {
-      id: 1,
-      word: "serendipity",
-      phonetic: "/ˌserənˈdipədē/",
-      meaning: "意外发现珍奇事物的能力；机缘巧合",
-      example: "Finding that book was pure serendipity.",
-      category: "advanced",
-      isNew: true
-    },
-    {
-      id: 2,
-      word: "ephemeral",
-      phonetic: "/əˈfem(ə)rəl/",
-      meaning: "短暂的；朝生暮死的",
-      example: "The beauty of cherry blossoms is ephemeral.",
-      category: "advanced",
-      isNew: false
-    },
-    {
-      id: 3,
-      word: "ubiquitous",
-      phonetic: "/yo͞oˈbikwədəs/",
-      meaning: "无处不在的；普遍存在的",
-      example: "Smartphones have become ubiquitous in modern society.",
-      category: "academic",
-      isNew: true
+  // 从API获取学习单词
+  useEffect(() => {
+    const fetchWords = async () => {
+      try {
+        setIsLoading(true)
+        const response = await fetch(`/api/words/learn?userId=default_user&mode=${studyMode}&limit=10`)
+        
+        if (!response.ok) {
+          throw new Error('获取单词失败')
+        }
+        
+        const data = await response.json()
+        
+        if (data.success && data.words.length > 0) {
+          const formattedWords: WordCard[] = data.words.map((word: any) => ({
+            id: word.id || word.word_id,
+            word: word.word,
+            phonetic: word.phonetic || '',
+            meaning: word.meaning,
+            example: word.example || '',
+            image_url: word.image_url,
+            category: word.category || 'general',
+            isNew: word.isNew || !word.last_studied
+          }))
+          
+          setWords(formattedWords)
+          setSessionStats(prev => ({
+            ...prev,
+            remaining: formattedWords.length
+          }))
+        } else {
+          setError('没有找到可学习的单词，请先上传单词本')
+        }
+      } catch (error) {
+        console.error('Failed to fetch words:', error)
+        setError('获取单词失败，请检查网络连接')
+      } finally {
+        setIsLoading(false)
+      }
     }
-  ])
+
+    fetchWords()
+  }, [studyMode])
 
   const currentWord = words[currentWordIndex]
   const progress = ((currentWordIndex + 1) / words.length) * 100
@@ -93,27 +109,64 @@ export default function LearnPage() {
     setShowAnswer(!showAnswer)
   }
 
-  const handleRating = (rating: StudyRating) => {
+  const handleRating = async (rating: StudyRating) => {
+    if (!currentWord) return
+    
     const isCorrect = rating >= StudyRating.HARD
     
-    setSessionStats(prev => ({
-      ...prev,
-      studied: prev.studied + 1,
-      correct: isCorrect ? prev.correct + 1 : prev.correct,
-      remaining: prev.remaining - 1
-    }))
-
-    // 进入下一个单词
-    setTimeout(() => {
-      if (currentWordIndex < words.length - 1) {
-        setCurrentWordIndex(prev => prev + 1)
-        setIsFlipped(false)
-        setShowAnswer(false)
-      } else {
-        // 学习会话结束
-        alert('学习会话完成！')
+    try {
+      // 更新服务器端学习记录
+      const response = await fetch('/api/words/learn', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: 'default_user',
+          wordId: currentWord.id,
+          rating: rating
+        })
+      })
+      
+      if (!response.ok) {
+        throw new Error('更新学习记录失败')
       }
-    }, 500)
+      
+      // 更新本地统计
+      setSessionStats(prev => ({
+        ...prev,
+        studied: prev.studied + 1,
+        correct: isCorrect ? prev.correct + 1 : prev.correct,
+        remaining: prev.remaining - 1
+      }))
+
+      // 进入下一个单词
+      setTimeout(() => {
+        if (currentWordIndex < words.length - 1) {
+          setCurrentWordIndex(prev => prev + 1)
+          setIsFlipped(false)
+          setShowAnswer(false)
+        } else {
+          // 学习会话结束
+          alert('学习会话完成！获得了 ' + (sessionStats.correct + (isCorrect ? 1 : 0)) * 10 + ' 经验值！')
+          window.location.href = '/'
+        }
+      }, 500)
+      
+    } catch (error) {
+      console.error('Failed to update learning record:', error)
+      // 即使更新失败，也继续到下一个单词
+      setTimeout(() => {
+        if (currentWordIndex < words.length - 1) {
+          setCurrentWordIndex(prev => prev + 1)
+          setIsFlipped(false)
+          setShowAnswer(false)
+        } else {
+          alert('学习会话完成！')
+          window.location.href = '/'
+        }
+      }, 500)
+    }
   }
 
   const handleSkip = () => {
@@ -139,16 +192,41 @@ export default function LearnPage() {
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
-  if (!currentWord) {
+  // 加载状态
+  if (isLoading) {
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-neon-blue mb-4">没有可学习的单词</h1>
-          <p className="text-gray-300 mb-8">请先上传单词本或等待新单词推送</p>
-          <Button variant="neon" onClick={() => window.location.href = '/upload'}>
-            <BookOpen className="w-4 h-4 mr-2" />
-            上传单词本
-          </Button>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-neon-blue mx-auto mb-4"></div>
+          <h1 className="text-2xl font-bold text-neon-blue mb-4">正在加载单词...</h1>
+          <p className="text-gray-300">请稍候</p>
+        </div>
+      </div>
+    )
+  }
+
+  // 错误状态或没有单词
+  if (error || !currentWord) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-red-400 mb-4">
+            {error || '没有可学习的单词'}
+          </h1>
+          <p className="text-gray-300 mb-8">
+            {error ? '请检查网络连接后重试' : '请先上传单词本或等待新单词推送'}
+          </p>
+          <div className="space-x-4">
+            <Button variant="neon" onClick={() => window.location.href = '/upload'}>
+              <BookOpen className="w-4 h-4 mr-2" />
+              上传单词本
+            </Button>
+            {error && (
+              <Button variant="outline" onClick={() => window.location.reload()}>
+                重新加载
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     )
