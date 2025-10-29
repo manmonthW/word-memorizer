@@ -7,8 +7,11 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PlayCircle, BookOpen, Target, Trophy, Zap, Star, Brain, TrendingUp } from 'lucide-react'
+import { UsernameInputDialog } from '@/components/username-input-dialog'
 
 export default function HomePage() {
+  const [username, setUsername] = useState<string | null>(null)
+  const [showUsernameDialog, setShowUsernameDialog] = useState(false)
   const [studyStats, setStudyStats] = useState({
     totalWords: 0,
     newWords: 0,
@@ -21,12 +24,22 @@ export default function HomePage() {
     xpToNext: 500
   })
 
-  // 加载本地存储的统计数据
+  // 加载用户名和统计数据
   useEffect(() => {
-    const loadStats = async () => {
+    const loadData = async () => {
       try {
         if (typeof window !== 'undefined') {
           const { localDB } = await import('@/lib/local-storage')
+          
+          // 检查用户名
+          const savedUsername = localDB.getUsername()
+          if (savedUsername) {
+            setUsername(savedUsername)
+          } else {
+            setShowUsernameDialog(true)
+          }
+          
+          // 加载统计数据
           const stats = localDB.getStudyStats()
           
           // 计算今日进度（假设目标是学习10个新单词和复习所有到期单词）
@@ -46,11 +59,11 @@ export default function HomePage() {
           }))
         }
       } catch (error) {
-        console.error('Failed to load stats:', error)
+        console.error('Failed to load data:', error)
       }
     }
 
-    loadStats()
+    loadData()
   }, [])
 
   const [todayGoal] = useState({
@@ -58,6 +71,19 @@ export default function HomePage() {
     reviewWords: 15,
     studyTime: 30 // minutes
   })
+
+  const handleUsernameSubmit = async (submittedUsername: string) => {
+    try {
+      if (typeof window !== 'undefined') {
+        const { localDB } = await import('@/lib/local-storage')
+        localDB.saveUsername(submittedUsername)
+        setUsername(submittedUsername)
+        setShowUsernameDialog(false)
+      }
+    } catch (error) {
+      console.error('Failed to save username:', error)
+    }
+  }
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -86,7 +112,7 @@ export default function HomePage() {
         <motion.div variants={itemVariants} className="text-center">
           <h1 className="text-4xl md:text-6xl font-bold mb-4">
             <span className="bg-gradient-to-r from-neon-blue via-electric-purple to-neon-green bg-clip-text text-transparent">
-              张桓羽同学，准备好征服单词了吗？
+              {username ? `${username}同学，准备好征服单词了吗？` : '准备好征服单词了吗？'}
             </span>
           </h1>
           <p className="text-xl text-gray-300 mb-8">
@@ -310,6 +336,12 @@ export default function HomePage() {
           </Tabs>
         </motion.div>
       </motion.div>
+
+      {/* Username Input Dialog */}
+      <UsernameInputDialog
+        open={showUsernameDialog}
+        onUsernameSubmit={handleUsernameSubmit}
+      />
     </div>
   )
 }

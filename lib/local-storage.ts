@@ -164,11 +164,24 @@ class LocalStorageDB {
     };
   }
 
+  // 获取用户名
+  getUsername(): string | null {
+    if (!this.isClient) return null;
+    return localStorage.getItem('username');
+  }
+
+  // 保存用户名
+  saveUsername(username: string): void {
+    if (!this.isClient) return;
+    localStorage.setItem('username', username);
+  }
+
   // 清空所有数据
   clearAll(): void {
     if (!this.isClient) return;
     localStorage.removeItem('words');
     localStorage.removeItem('learningRecords');
+    localStorage.removeItem('username');
   }
 }
 
